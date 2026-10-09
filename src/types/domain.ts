@@ -1,0 +1,24 @@
+import type { Database, Tables } from './database'
+export type AppRole = Database['public']['Enums']['app_role']
+export type WorkspaceRole = Database['public']['Enums']['member_role']
+export type BoardRole = Database['public']['Enums']['member_role']
+export type MemberRole = Database['public']['Enums']['member_role']
+export type TaskPriority = Database['public']['Enums']['task_priority']
+export type Profile = Tables<'profiles'>
+export type Workspace = Tables<'workspaces'>
+export type WorkspaceMember = Tables<'workspace_members'>
+export type Board = Tables<'boards'>
+export type BoardMember = Tables<'board_members'>
+export type BoardColumn = Tables<'board_columns'>
+export type Label = Tables<'labels'>
+export type Checklist = Tables<'checklists'>
+export type ChecklistItem = Tables<'checklist_items'>
+export type TaskComment = Tables<'comments'>
+export type TaskAttachment = Tables<'attachments'>
+export type TaskDependency = Tables<'task_dependencies'>
+export type WorkspaceNotification = Tables<'notifications'>
+export type ActivityLog = Tables<'activity_logs'>
+export type Favorite = Tables<'favorites'>
+export type Task = Tables<'tasks'> & { labels: string[]; assignees: Profile[] }
+export type WorkspaceWithRole = Workspace & { access_role: MemberRole }
+export type BoardWithColumns = Board & { access_role: MemberRole; columns: (BoardColumn & { tasks: Task[] })[] }

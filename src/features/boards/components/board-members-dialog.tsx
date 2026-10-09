@@ -1,0 +1,52 @@
+import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
+import { Search, ShieldCheck, UsersRound } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ErrorState, EmptyState } from '@/components/common/states'
+import { useAuth } from '@/features/auth/auth-context'
+import { useBoardMemberMutations } from '@/features/members/hooks/use-members'
+import { useBoardDirectory, useBoardRoleMutation, useBoardTransfer, useWorkspaceDirectory } from '@/features/members/hooks/use-member-directory'
+import { useAvatarUrls } from '@/features/profiles/hooks/use-avatar-urls'
+import type { BoardDirectoryMember } from '@/features/members/services/member-directory-service'
+import type { MemberRole } from '@/types/domain'
+import type { HomeBoard } from '../services/home-service'
+
+const names:Record<MemberRole,string>={ owner:'Owner',admin:'Admin',member:'Membro',viewer:'Visualizador' }
+export function BoardMembersDialog({ board, open, onOpenChange, readOnly = false }: { board: Pick<HomeBoard, 'id' | 'name' | 'workspace_id'>; open: boolean; onOpenChange: (open: boolean) => void; readOnly?: boolean }) {
+  const { session }=useAuth()
+  const members=useBoardDirectory(open ? board.id : '')
+  const workspace=useWorkspaceDirectory(open ? board.workspace_id : '')
+  const mutation=useBoardMemberMutations(board.id)
+  const roleMutation=useBoardRoleMutation(board.id)
+  const transferMutation=useBoardTransfer(board.id)
+  const avatarUrls=useAvatarUrls((members.data ?? []).map(item => item.avatar_url)).data ?? {}
+  const [search,setSearch]=useState('')
+  const [roleFilter,setRoleFilter]=useState<MemberRole|'all'>('all')
+  const [candidate,setCandidate]=useState('')
+  const [newRole,setNewRole]=useState<Exclude<MemberRole,'owner'>>('member')
+  const [removing,setRemoving]=useState<BoardDirectoryMember|null>(null)
+  const [transferring,setTransferring]=useState<BoardDirectoryMember|null>(null)
+  const [confirmation,setConfirmation]=useState('')
+  const me=members.data?.find(item => item.user_id===session?.user.id)
+  const isOwner=me?.workspace_role==='owner' || me?.explicit_role==='owner'
+  const canManage=!readOnly && (me?.role==='owner' || me?.role==='admin')
+  const eligible=(workspace.data ?? []).filter(person => !members.data?.some(item => item.user_id===person.user_id))
+  const candidateWorkspaceRole=eligible.find(person => person.user_id===candidate)?.role
+  const filtered=useMemo(() => (members.data ?? []).filter(item => (roleFilter==='all'||item.role===roleFilter) && `${item.display_name} ${item.email ?? ''}`.toLowerCase().includes(search.toLowerCase().trim())),[members.data,roleFilter,search])
+  const canEdit=(member:BoardDirectoryMember) => canManage && Boolean(member.id) && member.explicit_role!=='owner' && member.workspace_role!=='owner' && member.workspace_role!=='admin' && (isOwner || member.role==='member'||member.role==='viewer')
+  async function add() { if (!candidate) return; try { await mutation.add.mutateAsync({ userId:candidate,role:candidateWorkspaceRole==='viewer' ? 'viewer' : newRole }); setCandidate(''); toast.success('Membro adicionado ao quadro.') } catch { toast.error('Não foi possível adicionar o membro.') } }
+  async function changeRole(member:BoardDirectoryMember,role:Exclude<MemberRole,'owner'>) { if (!member.id) return; try { await roleMutation.mutateAsync({ id:member.id,role }); toast.success('Permissão do quadro atualizada.') } catch { toast.error('Não foi possível alterar o cargo. A permissão anterior foi mantida.') } }
+  async function remove() { if (!removing?.id) return; try { await mutation.remove.mutateAsync(removing.id); setRemoving(null); toast.success('Acesso ao quadro removido.') } catch { toast.error('Não foi possível remover o membro.') } }
+  async function transfer() { if (!transferring || confirmation!==board.name) return; try { await transferMutation.mutateAsync(transferring.user_id); setTransferring(null); setConfirmation(''); toast.success('Propriedade do quadro transferida.') } catch { toast.error('Não foi possível transferir o board.') } }
+  return <><Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto sm:max-w-[720px]"><DialogHeader><DialogTitle className="flex items-center gap-2"><UsersRound className="size-4 text-cyan" /> Membros de {board.name}</DialogTitle><DialogDescription>O quadro tem sua própria equipe. Owner e Admin do workspace já possuem acesso; adicione os demais membros abaixo.</DialogDescription></DialogHeader><div className="flex flex-wrap gap-2"><div className="relative min-w-44 flex-1"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={event => setSearch(event.target.value)} aria-label="Buscar membros do quadro" placeholder="Buscar nome ou e-mail" className="pl-9" /></div><Select value={roleFilter} onValueChange={value => setRoleFilter(value as MemberRole|'all')}><SelectTrigger aria-label="Filtrar cargo do quadro" className="w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{(Object.keys(names) as MemberRole[]).map(role => <SelectItem key={role} value={role}>{names[role]}</SelectItem>)}</SelectContent></Select></div>
+      {members.error || workspace.error ? <ErrorState message="Não foi possível carregar os membros do quadro." onRetry={() => { void members.refetch(); void workspace.refetch() }} /> : members.isLoading ? <div className="space-y-2"><Skeleton className="h-14 w-full" /><Skeleton className="h-14 w-full" /></div> : filtered.length ? <div className="max-h-[45svh] space-y-2 overflow-y-auto">{filtered.map(member => <div key={member.user_id} className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3"><Avatar className="size-9"><AvatarImage src={member.avatar_url ? avatarUrls[member.avatar_url] : undefined} alt="" /><AvatarFallback>{member.display_name.slice(0,2).toUpperCase()}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><div className="truncate text-sm font-medium">{member.display_name || 'Membro'}</div><div className="truncate text-xs text-muted-foreground">{member.email}</div><div className="text-[10px] text-cyan">{member.id ? 'Membro do quadro' : 'Acesso pelo workspace'}</div></div>{canEdit(member) ? <Select value={member.explicit_role ?? member.role} onValueChange={role => void changeRole(member,role as Exclude<MemberRole,'owner'>)}><SelectTrigger aria-label={`Cargo de ${member.display_name || 'Membro'} no board`} className="h-8 w-30"><SelectValue /></SelectTrigger><SelectContent>{(isOwner ? ['admin','member','viewer'] : ['member','viewer']).map(role => <SelectItem key={role} value={role}>{names[role as MemberRole]}</SelectItem>)}</SelectContent></Select> : <span className="rounded-md bg-primary/10 px-2 py-1 text-xs text-primary">{names[member.role]}</span>}{canEdit(member) && <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setRemoving(member)}>Remover</Button>}{canManage && isOwner && member.user_id!==session?.user.id && member.workspace_role!=='viewer' && member.explicit_role!=='owner' && <Button variant="ghost" size="sm" onClick={() => { setTransferring(member);setConfirmation('') }}>Transferir</Button>}</div>)}</div> : <EmptyState title="Nenhum membro encontrado" description={search||roleFilter!=='all' ? 'Ajuste a busca ou o filtro.' : 'Adicione membros do workspace a este quadro.'} />}
+      {canManage && eligible.length>0 && <div className="flex flex-wrap gap-2 border-t border-border pt-4"><Select value={candidate} onValueChange={value => { setCandidate(value); if (eligible.find(person => person.user_id===value)?.role==='viewer') setNewRole('viewer') }}><SelectTrigger aria-label="Adicionar membro do workspace" className="min-w-40 flex-1"><SelectValue placeholder="Escolha um membro" /></SelectTrigger><SelectContent>{eligible.map(person => <SelectItem key={person.user_id} value={person.user_id}>{person.display_name || 'Membro'} · {person.email}</SelectItem>)}</SelectContent></Select><Select value={newRole} onValueChange={value => setNewRole(value as Exclude<MemberRole,'owner'>)}><SelectTrigger aria-label="Cargo no board" className="w-32"><SelectValue /></SelectTrigger><SelectContent>{(candidateWorkspaceRole==='viewer' ? ['viewer'] : isOwner ? ['admin','member','viewer'] : ['member','viewer']).map(role => <SelectItem key={role} value={role}>{names[role as MemberRole]}</SelectItem>)}</SelectContent></Select><Button disabled={!candidate || mutation.add.isPending} onClick={() => void add()}>Adicionar</Button></div>}</DialogContent></Dialog>
+    <Dialog open={Boolean(removing)} onOpenChange={value => { if (!value) setRemoving(null) }}><DialogContent><DialogHeader><DialogTitle>Remover {removing?.display_name} do quadro?</DialogTitle><DialogDescription>O acesso a este quadro e às tarefas será revogado.</DialogDescription></DialogHeader><div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setRemoving(null)}>Cancelar</Button><Button variant="destructive" disabled={mutation.remove.isPending} onClick={() => void remove()}>Remover</Button></div></DialogContent></Dialog>
+    <Dialog open={Boolean(transferring)} onOpenChange={value => { if (!value) setTransferring(null) }}><DialogContent><DialogHeader><DialogTitle className="flex items-center gap-2"><ShieldCheck className="size-4 text-warning" /> Transferir quadro</DialogTitle><DialogDescription>{transferring?.display_name} se tornará owner do quadro. Seu cargo neste quadro passará a Admin. Digite o nome do quadro para confirmar.</DialogDescription></DialogHeader><Input aria-label="Confirme o nome do quadro" value={confirmation} onChange={event => setConfirmation(event.target.value)} placeholder={board.name} /><div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setTransferring(null)}>Cancelar</Button><Button variant="destructive" disabled={confirmation!==board.name || transferMutation.isPending} onClick={() => void transfer()}>Transferir propriedade</Button></div></DialogContent></Dialog>
+  </>
+}

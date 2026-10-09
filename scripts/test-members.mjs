@@ -1,0 +1,152 @@
+import assert from 'node:assert/strict'
+import { createTestDatabase } from './database-test-context.mjs'
+const db=await createTestDatabase()
+let checks=0
+const uid=n => `00000000-0000-4000-8000-${String(n).padStart(12,'0')}`
+async function root(){ await db.exec("reset role; select set_config('request.jwt.claim.sub','',false)") }
+async function actor(n){ await root(); await db.query("select set_config('request.jwt.claim.sub',$1,false)",[uid(n)]); await db.exec('set role authenticated') }
+async function rows(sql,args=[]){ return (await db.query(sql,args)).rows }
+async function denied(sql,args=[],codes=['42501','23514']){ let error; try{ await db.query(sql,args) }catch(e){ error=e } assert.ok(error,`Esperava rejeição: ${sql}`); assert.ok(codes.includes(error.code),`${error.code}: ${error.message}`); checks++ }
+function check(actual,expected,label){ assert.deepEqual(actual,expected,label); checks++ }
+try {
+  for(let n=1;n<=8;n++) await db.query('insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values($1,$2,$3,$4)',[uid(n),`user${n}@example.test`,n===7?null:new Date(),{display_name:`User ${n}`}])
+  const wa=(await rows('select id from public.workspaces where owner_id=$1',[uid(1)]))[0].id
+  await actor(1)
+  await root()
+  for(const [n,role] of [[2,'admin'],[3,'member'],[4,'viewer']]) await db.query('insert into public.workspace_members(workspace_id,user_id,role) values($1,$2,$3)',[wa,uid(n),role])
+  await actor(1)
+  const ba=(await rows('insert into public.boards(workspace_id,name) values($1,$2) returning id',[wa,'Board A']))[0].id
+  const bb=(await rows('insert into public.boards(workspace_id,name) values($1,$2) returning id',[wa,'Board B']))[0].id
+  await db.query("insert into public.board_members(board_id,user_id,role) values($1,$2,'member'),($1,$3,'viewer')",[ba,uid(3),uid(4)])
+  await db.query("insert into public.board_members(board_id,user_id,role) values($1,$2,'member')",[bb,uid(4)])
+  const ca=(await rows('select id from public.board_columns where board_id=$1 order by position limit 1',[ba]))[0].id
+  const cb=(await rows('select id from public.board_columns where board_id=$1 order by position limit 1',[bb]))[0].id
+  const ta=(await rows('select * from public.create_task($1,$2,$3)',[ba,ca,'Task A']))[0].id
+  const tb=(await rows('select * from public.create_task($1,$2,$3)',[bb,cb,'Task B']))[0].id
+  const comment=(await rows("insert into public.comments(task_id,content) values($1,'Comentário B') returning id",[tb]))[0].id
+  const path=`${bb}/${tb}/private.pdf`
+  await db.query('insert into storage.objects(bucket_id,name,owner_id) values($1,$2,$3)',['task-attachments',path,uid(1)])
+  await db.query("insert into public.attachments(task_id,file_name,file_url,file_type,file_size) values($1,'private.pdf',$2,'application/pdf',12)",[tb,path])
+  const initial=(await rows('select public.workspace_member_directory($1) as data',[wa]))[0].data
+  check(initial.length,4,'Workspace directory lista membros reais')
+  check(initial.find(item=>item.user_id===uid(3)).email,'user3@example.test','E-mail retornado somente por RPC autorizado')
+  const boardList=(await rows('select public.board_member_directory($1) as data',[ba]))[0].data
+  check(boardList.map(item=>item.user_id).sort(),[uid(1),uid(2),uid(3),uid(4)].sort(),'Board directory inclui apenas participantes e gestores implícitos')
+  await actor(3)
+  await denied("insert into public.board_members(board_id,user_id,role) values($1,$2,'member')",[ba,uid(2)])
+  check((await rows('select id from public.boards where id=$1',[bb])).length,0,'Membro do Board A não lê Board B')
+  check((await rows('select id from public.tasks where id=$1',[tb])).length,0,'Tarefa de outro board não vaza por UUID')
+  check((await rows('select id from public.comments where id=$1',[comment])).length,0,'Comentário de outro board não vaza por UUID')
+  check((await rows('select id from public.attachments where file_url=$1',[path])).length,0,'Metadados de arquivo de outro board não vazam')
+  check((await rows('select name from storage.objects where name=$1',[path])).length,0,'Objeto privado de outro board não vaza')
+  await denied('select public.board_member_directory($1)',[bb])
+  await denied("select public.create_workspace_invitation($1,$2,$3)",[wa,'new@example.test','member'])
+  await actor(4)
+  check((await rows('update public.tasks set title=$2 where id=$1 returning id',[ta,'Burlado'])).length,0,'Viewer não altera tarefa')
+  await denied('select public.create_task($1,$2,$3)',[ba,ca,'Burlado'])
+  await actor(2)
+  check((await rows('delete from public.workspace_members where workspace_id=$1 and user_id=$2 returning id',[wa,uid(2)])).length,0,'Workspace admin não remove outro admin')
+  await denied("insert into public.workspace_members(workspace_id,user_id,role) values($1,$2,'member')",[wa,uid(5)])
+  await denied("update public.workspace_members set role='admin' where workspace_id=$1 and user_id=$2",[wa,uid(3)])
+  let edited=(await rows('select public.workspace_update_member($1,$2,$3,$4) as member',[wa,uid(3),'Nome Atualizado','viewer']))[0].member
+  check(edited,{user_id:uid(3),display_name:'Nome Atualizado',role:'viewer',changed:true},'Workspace admin edita nome permitido e cargo de membro')
+  check((await rows('select display_name from public.profiles where id=$1',[uid(3)]))[0].display_name,'Nome Atualizado','Edição de display_name é aplicada ao perfil global')
+  check((await rows("select count(*)::int n from public.activity_logs where action='workspace_member_updated' and workspace_id=$1 and user_id=$2",[wa,uid(2)]))[0].n,1,'Edição gera activity log pelo backend')
+  await denied('select public.workspace_update_member($1,$2,null,$3)',[wa,uid(3),'admin'])
+  await denied('select public.workspace_update_member($1,$2,null,$3)',[wa,uid(2),'member'])
+  await denied("select public.create_workspace_invitation($1,$2,$3)",[wa,'admin@example.test','admin'])
+  const memberInvite=(await rows("select public.create_workspace_invitation($1,$2,$3) as data",[wa,'user7@example.test','member']))[0].data
+  await denied('select token from public.workspace_invitations where id=$1',[memberInvite.id])
+  assert.match(memberInvite.secret,/^[0-9a-f]{64}$/); checks++
+  await root()
+  const stored=(await rows('select token,expires_at from public.workspace_invitations where id=$1',[memberInvite.id]))[0]
+  check(stored.token===memberInvite.secret,false,'Segredo bruto não persiste no banco')
+  check(Math.round((new Date(stored.expires_at)-Date.now())/86400000),7,'Convite dura sete dias')
+  await db.exec('set role anon')
+  check((await rows('select public.lookup_workspace_invitation($1) as data',[memberInvite.secret]))[0].data.status,'pending','Link validado sem sessão')
+  await denied('select id from public.workspace_invitations',[],['42501'])
+  await actor(5)
+  await denied('select public.accept_workspace_invitation($1)',[memberInvite.secret])
+  await actor(7)
+  await denied('select public.accept_workspace_invitation($1)',[memberInvite.secret])
+  await root(); await db.query('update auth.users set email_confirmed_at=now() where id=$1',[uid(7)])
+  await actor(7)
+  check((await rows('select public.accept_workspace_invitation($1) as id',[memberInvite.secret]))[0].id,wa,'E-mail confirmado aceita convite')
+  check((await rows('select role from public.workspace_members where workspace_id=$1 and user_id=$2',[wa,uid(7)]))[0].role,'member','Aceitação cria membership correto')
+  await denied('select public.accept_workspace_invitation($1)',[memberInvite.secret])
+  check((await rows('select id from public.boards where id=$1',[ba])).length,0,'Convite do workspace não concede board automaticamente')
+  await actor(1)
+  await denied('insert into public.task_assignees(task_id,user_id) values($1,$2)',[ta,uid(7)])
+  const one=(await rows("select public.create_workspace_invitation($1,$2,$3) as data",[wa,'user8@example.test','viewer']))[0].data
+  const two=(await rows("select public.create_workspace_invitation($1,$2,$3) as data",[wa,'user8@example.test','viewer']))[0].data
+  check((await rows('select public.lookup_workspace_invitation($1) as data',[one.secret]))[0].data.status,'revoked','Reenvio revoga link antigo')
+  check((await rows('select public.lookup_workspace_invitation($1) as data',[two.secret]))[0].data.status,'pending','Novo link permanece válido')
+  await root(); await db.query("update public.workspace_invitations set created_at=now()-interval '8 days', expires_at=now()-interval '1 day' where id=$1",[two.id])
+  await actor(8)
+  check((await rows('select public.lookup_workspace_invitation($1) as data',[two.secret]))[0].data.status,'expired','Convite expirado é identificado')
+  await denied('select public.accept_workspace_invitation($1)',[two.secret])
+  await actor(2)
+  check((await rows("delete from public.workspace_members where workspace_id=$1 and user_id=$2 returning id",[wa,uid(1)])).length,0,'Admin não remove owner do workspace')
+  await denied("update public.workspace_members set role='viewer' where workspace_id=$1 and user_id=$2",[wa,uid(1)])
+  await denied('select public.workspace_update_member($1,$2,null,$3)',[wa,uid(1),'member'])
+  await denied("update public.workspace_members set role='owner' where workspace_id=$1 and user_id=$2",[wa,uid(3)])
+  await denied('select public.transfer_board_ownership($1,$2)',[ba,uid(2)])
+  await actor(1)
+  edited=(await rows('select public.workspace_update_member($1,$2,$3,$4) as member',[wa,uid(3),'Nome do Owner','admin']))[0].member
+  check(edited.role,'admin','Workspace owner pode atribuir Admin no workspace')
+  await denied('select public.workspace_update_member($1,$2,null,$3)',[wa,uid(3),'owner'])
+  await actor(3)
+  await denied('select public.workspace_update_member($1,$2,$3,$4)',[wa,uid(2),'Tentativa Member','viewer'])
+  await actor(4)
+  await denied('select public.workspace_update_member($1,$2,null,$3)',[wa,uid(3),'member'])
+  await actor(1)
+  await rows('select public.workspace_update_member($1,$2,null,$3)',[wa,uid(3),'member'])
+  await root()
+  await db.query('insert into public.task_assignees(task_id,user_id) values($1,$2)',[tb,uid(4)])
+  await actor(1)
+  const removedViewer=await rows('delete from public.workspace_members where workspace_id=$1 and user_id=$2 returning id',[wa,uid(4)])
+  check(removedViewer.length,1,'Owner remove viewer do workspace')
+  check((await rows('select id from public.board_members where user_id=$1 and board_id in ($2,$3)',[uid(4),ba,bb])).length,0,'Acessos aos boards do workspace removido são limpos')
+  check((await rows('select id from public.tasks where id=$1',[tb])).length,1,'Tarefa atribuída permanece no board')
+  check((await rows('select task_id from public.task_assignees where task_id=$1 and user_id=$2',[tb,uid(4)])).length,0,'Atribuição órfã é limpa sem apagar a tarefa')
+  check((await rows('select id from public.comments where id=$1',[comment])).length,1,'Comentários e histórico permanecem')
+  await root()
+  check((await rows('select id from auth.users where id=$1',[uid(4)])).length,1,'Auth user permanece após remoção do workspace')
+  check((await rows('select id from public.profiles where id=$1',[uid(4)])).length,1,'Profile global permanece após remoção do workspace')
+  check((await rows('select id from public.workspaces where owner_id=$1',[uid(4)])).length,1,'Workspace próprio em outra relação permanece')
+  check((await rows("select metadata->>'summary' summary from public.activity_logs where workspace_id=$1 and user_id=$2 and action='workspace_member_removed' order by created_at desc limit 1",[wa,uid(1)]))[0].summary,'User 1 removeu User 4 do workspace Meu workspace.','Remoção gera activity log com ator e alvo')
+  check((await rows('select id from public.workspace_members where workspace_id=$1 and user_id=$2',[wa,uid(4)])).length,0,'Apenas membership do workspace escolhido foi removido')
+  await actor(1)
+  check((await rows('delete from public.board_members where board_id=$1 and user_id=$2 returning id',[ba,uid(1)])).length,0,'Owner do board não é removido diretamente')
+  await db.query('select public.transfer_board_ownership($1,$2)',[ba,uid(3)])
+  check((await rows("select user_id from public.board_members where board_id=$1 and role='owner'",[ba]))[0].user_id,uid(3),'Transferência de board mantém owner único')
+  check((await rows("select role from public.board_members where board_id=$1 and user_id=$2",[ba,uid(1)]))[0].role,'admin','Owner anterior do board vira admin')
+  await db.query('select public.transfer_workspace_ownership($1,$2)',[wa,uid(2)])
+  check((await rows('select owner_id from public.workspaces where id=$1',[wa]))[0].owner_id,uid(2),'Transferência do workspace mantém owner')
+  await root()
+  await db.query("insert into public.workspace_members(workspace_id,user_id,role) values($1,$2,'admin')",[wa,uid(8)])
+  await db.query("update public.workspace_members set role='admin' where workspace_id=$1 and user_id=$2",[wa,uid(3)])
+  await actor(8)
+  check((await rows('delete from public.workspace_members where workspace_id=$1 and user_id=$2 returning id',[wa,uid(3)])).length,0,'Workspace admin não remove outro admin')
+  await root()
+  await db.query("update public.workspace_members set role='member' where workspace_id=$1 and user_id=$2",[wa,uid(3)])
+  await actor(2)
+  check((await rows('delete from public.workspace_members where workspace_id=$1 and user_id=$2 returning id',[wa,uid(2)])).length,0,'Último owner não pode remover a própria associação')
+  const removedAdmin=await rows('delete from public.workspace_members where workspace_id=$1 and user_id=$2 returning id',[wa,uid(1)])
+  check(removedAdmin.length,1,'Owner remove workspace admin')
+  await root()
+  check((await rows('select id from auth.users where id=$1',[uid(1)])).length,1,'Remover admin do workspace não exclui conta do sistema')
+  check((await rows('select id from public.profiles where id=$1',[uid(1)])).length,1,'Remover admin do workspace preserva profile global')
+  await actor(2)
+  const removedMember=await rows('delete from public.workspace_members where workspace_id=$1 and user_id=$2 returning id',[wa,uid(3)])
+  check(removedMember.length,1,'Owner remove workspace admin')
+  check((await rows('select id from public.tasks where id=$1',[ta])).length,1,'Remover member não apaga tarefas')
+  check((await rows('select id from public.comments where id=$1',[comment])).length,1,'Remover member não apaga comentários')
+  await root()
+  check((await rows('select id from auth.users where id=$1',[uid(3)])).length,1,'Remover member não exclui conta global')
+  await actor(6); await root(); await db.query("update public.profiles set app_role='admin' where id=$1",[uid(6)]); await actor(6)
+  check((await rows('select id from public.boards where id=$1',[ba])).length,0,'app_role admin não ganha acesso a boards')
+  await denied('select public.workspace_member_directory($1)',[wa])
+  check((await rows('select id from public.workspace_invitations where workspace_id=$1',[wa])).length,0,'app_role admin não vê convites de workspace alheio')
+  console.log(`PASS: ${checks} verificações de membros, convites, owners e isolamento.`)
+} finally { await db.close() }

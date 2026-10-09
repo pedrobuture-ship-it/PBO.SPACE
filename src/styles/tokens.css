@@ -1,0 +1,47 @@
+/* Handcrafted Digital Workspace · foundation tokens */
+:root, .dark {
+  color-scheme: dark;
+  --background: #080b10;
+  --sidebar: #0b0e14;
+  --card: #111620;
+  --surface-raised: #181e2a;
+  --surface-hover: #1b2331;
+  --foreground: #edf2fa;
+  --muted-foreground: #a4afc1;
+  --subtle-foreground: #7e8ca2;
+  --border: #273142;
+  --input: #52647e;
+  --primary: #4c8dff;
+  --primary-foreground: #07101f;
+  --cyan: #69dff1;
+  --success: #51dba6;
+  --warning: #f5cb66;
+  --urgency: #ff7fa3;
+  --info: #b49aff;
+  --card-foreground: var(--foreground);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--foreground);
+  --secondary: #142932;
+  --secondary-foreground: var(--cyan);
+  --muted: var(--surface-raised);
+  --accent: var(--surface-hover);
+  --accent-foreground: var(--foreground);
+  --destructive: var(--urgency);
+  --ring: var(--cyan);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-accent: #122139;
+  --sidebar-accent-foreground: #9ebfff;
+  --sidebar-border: #202939;
+  --highlight-surface: #111d30;
+  --radius: .625rem;
+  --control-height-touch: 2.75rem;
+  --shadow-card: 0 4px 14px #00000024;
+  --shadow-card-hover: 0 8px 24px #00000030, 0 0 18px #4c8dff08;
+  --shadow-overlay: 0 24px 80px #00000080;
+  --glow-brand: 0 0 18px #4c8dff16;
+  --overlay: #03060bbd;
+  --motion-fast: 140ms;
+  --motion-base: 180ms;
+  --motion-slow: 240ms;
+  --motion-ease: cubic-bezier(.22, 1, .36, 1);
+}
