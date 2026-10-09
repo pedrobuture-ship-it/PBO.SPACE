@@ -1,4 +1,4 @@
-# hwd.space — Handcrafted Digital Workspace
+# NotePB — Handcrafted Digital Workspace
 
 Aplicação Kanban React/TypeScript com Vite, Tailwind, shadcn/ui, Framer Motion, dnd-kit e Supabase. O banco, autenticação, arquivos e eventos são reais; não há modo de demonstração.
 

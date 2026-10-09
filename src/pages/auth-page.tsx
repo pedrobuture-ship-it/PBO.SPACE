@@ -1,7 +1,7 @@
 import { FieldError } from '@/components/ui/field-message'
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
-import { ArrowRight, Eye, EyeOff, Layers3 } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
@@ -52,12 +52,12 @@ export function AuthPage() {
           <DoodleStar className="absolute -right-4 -top-4 size-8 text-cyan" />
         </div>
       </div>
-      <div className="relative z-10 flex items-center justify-between text-[11px] text-muted-foreground"><span>© 2026 hwd.space</span><span>HANDCRAFTED DIGITAL WORKSPACE</span></div>
+      <div className="relative z-10 flex items-center justify-between text-[11px] text-muted-foreground"><span>© 2026 NotePB</span><span>HANDCRAFTED DIGITAL WORKSPACE</span></div>
     </div>
     <div className="flex min-h-svh flex-col bg-background px-6 py-8 sm:px-12 lg:px-16 xl:px-24">
       <div className="flex items-center justify-between lg:justify-end"><div className="lg:hidden"><Brand /></div></div>
       <MotionPage className="mx-auto my-auto w-full max-w-[420px] py-10 sm:py-16">
-        <div className="mb-8 flex size-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary"><Layers3 className="size-6 -rotate-12" /></div>
+        <img src="/notepb-fox.webp" alt="" className="mb-8 size-12 rounded-xl object-cover shadow-[var(--glow-brand)]" />
         <div className="mb-2 text-[10px] font-bold uppercase tracking-[.28em] text-primary">Bem-vindo de volta</div>
         <h2 className="text-3xl font-semibold leading-tight tracking-[-.045em] sm:text-4xl">Entre no seu espaço.</h2>
         <p className="mt-3 text-sm text-muted-foreground">Suas ideias e projetos estão esperando por você.</p>
