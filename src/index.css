@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
 @import "./styles/tokens.css";
+@import "./styles/surfaces.css";
+@import "./styles/kanban.css";
 @custom-variant dark (&:is(.dark *));
 @theme inline {
   --font-sans: 'Geist Variable', sans-serif;
@@ -17,6 +19,7 @@
   --color-input: var(--input); --color-ring: var(--ring);
   --color-cyan: var(--cyan); --color-success: var(--success);
   --color-warning: var(--warning); --color-urgency: var(--urgency); --color-info: var(--info);
+  --color-accent-purple: var(--accent-purple); --color-border-subtle: var(--border-subtle);
   --color-surface-raised: var(--surface-raised); --color-surface-hover: var(--surface-hover);
   --color-subtle-foreground: var(--subtle-foreground); --color-highlight: var(--highlight-surface);
   --color-sidebar: var(--sidebar); --color-sidebar-foreground: var(--sidebar-foreground);
@@ -29,7 +32,7 @@
   * { @apply border-border outline-ring/50; }
   html { font-family: 'Geist Variable', sans-serif; scroll-behavior: smooth; }
   html { scrollbar-color: var(--input) transparent; scrollbar-width: thin; }
-  body { @apply bg-background text-foreground; margin: 0; min-width: 320px; -webkit-font-smoothing: antialiased; }
+  body { @apply bg-background text-foreground; margin: 0; min-width: 320px; -webkit-font-smoothing: antialiased; background-image: radial-gradient(ellipse at 80% -20%, #aa96ff0b, transparent 52%), radial-gradient(ellipse at -15% 60%, #7adcec07, transparent 42%); }
   button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
   button { cursor: pointer; }
   button:disabled { cursor: not-allowed; }
@@ -44,21 +47,15 @@
   input[type=date]::-webkit-calendar-picker-indicator { opacity: .7; cursor: pointer; }
   :is(h1,h2,h3,p) { overflow-wrap: anywhere; }
 }
-.workspace-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-  box-shadow: var(--shadow-card);
-  transition: border-color var(--motion-base), box-shadow var(--motion-base);
-}
-.workspace-card:hover { border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); box-shadow: var(--shadow-card-hover); }
+.workspace-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow-card); transition: border-color var(--motion-base), box-shadow var(--motion-base); }
+.workspace-card:hover { border-color: color-mix(in srgb, var(--primary) 42%, var(--border)); box-shadow: var(--shadow-card-hover); }
 .highlight-panel { background: radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--primary) 11%, transparent), transparent 65%), var(--card); }
 .annotation { font-family: Georgia, serif; font-style: italic; }
 .sketch { pointer-events: none; flex-shrink: 0; }
-.nav-item { position: relative; display: flex; align-items: center; gap: 12px; min-height: 40px; border-radius: 8px; padding: 9px 12px; color: var(--muted-foreground); font-size: 13px; font-weight: 500; transition: color var(--motion-fast), background-color var(--motion-fast); }
+.nav-item { position: relative; display: flex; align-items: center; gap: 12px; min-height: 40px; border-radius: 8px; padding: 9px 12px; color: var(--muted-foreground); font-size: 13px; font-weight: 500; transition: color var(--motion-fast), background-color var(--motion-fast), box-shadow var(--motion-fast); }
 .nav-item:hover { background: var(--surface-raised); color: var(--foreground); }
-.nav-item[aria-current=page] { background: var(--sidebar-accent); color: var(--sidebar-accent-foreground); box-shadow: var(--glow-brand); }
-.nav-item[aria-current=page]::before { content: ''; position: absolute; top: 10px; bottom: 10px; left: -8px; width: 2px; background: var(--primary); border-radius: 2px; box-shadow: 0 0 8px var(--primary); }
+.nav-item[aria-current=page] { background: linear-gradient(105deg, #aa96ff24, #aa96ff0a 82%), var(--sidebar-accent); color: var(--sidebar-accent-foreground); box-shadow: inset 0 0 0 1px #aa96ff26, var(--glow-brand); }
+.nav-item[aria-current=page]::before { content: ''; position: absolute; top: 7px; bottom: 7px; left: -3px; width: 3px; background: var(--primary); border-radius: 3px 1px 2px 1px; transform: rotate(2deg); box-shadow: 0 0 8px #aa96ff55; }
 .hide-scrollbar { scrollbar-width: thin; }
 [data-slot=button], [data-slot=input], [data-slot=textarea], [data-slot=tabs-trigger] { transition-duration: var(--motion-fast); }
 [data-slot=dialog-content], [data-slot=sheet-content], [data-slot=dropdown-menu-content], [data-slot=tooltip-content], [data-slot=select-content] { animation-duration: var(--motion-base); }
@@ -92,7 +89,7 @@
 .field-hint { font-size: 12px; line-height: 1.6; color: var(--muted-foreground); }
 .field-error { font-size: 12px; line-height: 1.6; color: var(--destructive); }
 .kanban-scroll { scroll-padding-inline: 20px; overscroll-behavior-x: contain; }
-.task-section { min-width: 0; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; background: var(--card); }
+.task-section { min-width: 0; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; background-color: var(--card); }
 .task-section > h3 { margin-bottom: 12px; }
 .task-section :is(p,span) { overflow-wrap: anywhere; }
 .task-section [role=progressbar] { transition: width var(--motion-base); }

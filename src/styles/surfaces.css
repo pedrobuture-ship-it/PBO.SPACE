@@ -1,0 +1,105 @@
+@layer components {
+  .workspace-canvas {
+    background-image: repeating-linear-gradient(0deg, transparent 0 7px, var(--texture-ink) 7px 8px);
+  }
+
+  .handcrafted-sidebar {
+    background-color: var(--sidebar);
+    background-image: radial-gradient(circle at 0 0, #aa96ff0b, transparent 35%), repeating-linear-gradient(130deg, transparent 0 13px, #ffffff02 13px 14px);
+    box-shadow: inset -1px 0 #aa96ff12;
+  }
+
+  .handcrafted-topbar {
+    background: color-mix(in srgb, var(--background) 94%, var(--card));
+    box-shadow: 0 1px 0 #aa96ff0c;
+  }
+
+  .topbar-search {
+    position: relative;
+    box-shadow: inset 0 1px #ffffff0b, var(--shadow-card);
+  }
+  .topbar-search:hover { border-color: color-mix(in srgb, var(--primary) 48%, var(--border)); }
+  .topbar-search::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: -3px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #aa96ff70 45%, transparent);
+    pointer-events: none;
+  }
+
+  .sidebar-section-label { position: relative; width: fit-content; }
+  .sidebar-section-label::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 12%;
+    bottom: -5px;
+    height: 2px;
+    background: var(--primary);
+    border-radius: 50%;
+    transform: rotate(-2deg);
+    opacity: .65;
+  }
+
+  .handcrafted-note {
+    background-image: linear-gradient(120deg, #aa96ff0a, transparent 65%);
+    box-shadow: 2px 3px 0 #090d18, 3px 4px 0 var(--border-subtle);
+  }
+
+  .board-filter-panel {
+    position: relative;
+    isolation: isolate;
+    background: linear-gradient(110deg, #aa96ff0a, transparent 35%), var(--card);
+    box-shadow: var(--shadow-card);
+  }
+  .board-filter-panel::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 12px;
+    bottom: 12px;
+    width: 3px;
+    border-radius: 3px 1px 4px 1px;
+    background: linear-gradient(var(--primary), #aa96ff3a);
+    transform: rotate(.5deg);
+    pointer-events: none;
+  }
+
+  .board-header-icon, .board-project-icon {
+    position: relative;
+    box-shadow: inset 0 1px #ffffff13, 2px 3px 0 #090e19;
+    background-image: radial-gradient(circle at 25% 15%, #aa96ff1b, transparent 65%);
+  }
+
+  .project-card {
+    background-image: linear-gradient(145deg, #aa96ff08, transparent 48%);
+  }
+  .project-card[data-favorite=true] { border-color: color-mix(in srgb, var(--primary) 37%, var(--border)); }
+
+  [data-slot=button][data-variant=default] {
+    background-image: linear-gradient(110deg, #d1c6ff 0%, var(--primary) 56%, #9582f0 100%);
+    box-shadow: inset 0 1px #ffffff55, 0 3px 12px #aa96ff20;
+  }
+  [data-slot=button][data-variant=default]:not(:disabled):hover {
+    box-shadow: inset 0 1px #ffffff70, 0 5px 17px #aa96ff35;
+  }
+  [data-slot=button][data-variant=outline] { box-shadow: inset 0 1px #ffffff08; }
+  [data-slot=input], [data-slot=textarea], [data-slot=select-trigger] { background-color: color-mix(in srgb, var(--background) 75%, var(--card)); }
+  [data-slot=input]:focus-visible, [data-slot=textarea]:focus-visible, [data-slot=select-trigger]:focus-visible { border-color: var(--primary); }
+  [data-slot=badge] { box-shadow: inset 0 1px #ffffff0c; }
+  [data-slot=avatar] { box-shadow: 0 0 0 1px #aa96ff22, 1px 1px 0 #080c16; }
+  [data-slot=card] { border: 1px solid var(--border); box-shadow: var(--shadow-card); }
+  [data-slot=dialog-content], [data-slot=sheet-content], [data-slot=dropdown-menu-content], [data-slot=select-content], [data-slot=tooltip-content] {
+    border-color: var(--border);
+    background-image: linear-gradient(135deg, #aa96ff07, transparent 36%);
+  }
+  [data-slot=dialog-content], [data-slot=sheet-content] { box-shadow: var(--shadow-overlay); }
+  [data-slot=tooltip-content] { border: 1px solid var(--border); box-shadow: var(--shadow-card); }
+  [data-slot=dialog-title], [data-slot=sheet-title] { text-decoration: underline; text-decoration-color: #aa96ff80; text-decoration-thickness: 1px; text-underline-offset: 6px; }
+
+  .handcrafted-unread { border-left: 2px solid var(--primary); background-image: linear-gradient(90deg, #aa96ff11, transparent 60%); }
+  .task-section { background-image: linear-gradient(135deg, #aa96ff07, transparent 52%); box-shadow: inset 0 1px #ffffff09; }
+}

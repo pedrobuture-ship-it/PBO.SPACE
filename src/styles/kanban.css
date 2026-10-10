@@ -1,0 +1,102 @@
+@layer components {
+  .board-page > header h1 { letter-spacing: -.04em; text-shadow: 0 1px #ffffff0b; }
+  .board-page > header .size-12 { box-shadow: inset 0 1px #ffffff13, 2px 3px 0 #090e19; background-image: radial-gradient(circle at 25% 15%, #aa96ff1b, transparent 65%); }
+  .board-page > section[aria-label="Busca e filtros"] {
+    position: relative;
+    background: linear-gradient(110deg, #aa96ff0a, transparent 35%), var(--card);
+    box-shadow: var(--shadow-card);
+  }
+  .board-page > section[aria-label="Busca e filtros"]::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 12px;
+    bottom: 12px;
+    width: 3px;
+    border-radius: 3px 1px 4px 1px;
+    background: linear-gradient(var(--primary), #aa96ff3a);
+    transform: rotate(.5deg);
+    pointer-events: none;
+  }
+  .kanban-lane {
+    position: relative;
+    isolation: isolate;
+    border-color: var(--border);
+    background-color: var(--card);
+    background-image: radial-gradient(circle at 14% 0, color-mix(in srgb, var(--lane-color) 9%, transparent), transparent 42%), repeating-linear-gradient(135deg, transparent 0 16px, #ffffff02 16px 17px);
+    box-shadow: var(--shadow-card), inset 0 1px #ffffff0c;
+  }
+  .kanban-lane::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 14px;
+    width: 32px;
+    height: 2px;
+    border-radius: 3px;
+    background: var(--lane-color);
+    opacity: .6;
+    transform: rotate(-2deg);
+    pointer-events: none;
+  }
+  .kanban-lane[data-over=true] { border-color: var(--lane-color); box-shadow: var(--shadow-card), inset 0 0 0 1px color-mix(in srgb, var(--lane-color) 32%, transparent); }
+
+  .sketch-drop-zone {
+    background-image: repeating-linear-gradient(135deg, #ffffff02 0 8px, transparent 8px 16px);
+    border-color: color-mix(in srgb, var(--lane-color) 24%, var(--border));
+  }
+  .kanban-lane[data-over=true] .sketch-drop-zone { border-color: var(--lane-color); color: var(--foreground); background-color: color-mix(in srgb, var(--lane-color) 9%, transparent); }
+
+  .task-card-shell { position: relative; isolation: isolate; }
+  .task-card-shell::before {
+    content: '';
+    position: absolute;
+    inset: 3px -2px -3px 3px;
+    border: 1px solid color-mix(in srgb, var(--task-accent) 20%, var(--border-subtle));
+    border-radius: calc(var(--radius) - 1px);
+    background: #111827;
+    transform: rotate(.25deg);
+    pointer-events: none;
+    transition: transform var(--motion-base) var(--motion-ease);
+  }
+  .task-card-shell:hover::before { transform: translate(1px, 1px) rotate(.35deg); }
+  .task-card-face {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: linear-gradient(125deg, color-mix(in srgb, var(--task-accent) 5%, transparent), transparent 40%), var(--surface-raised);
+    box-shadow: inset 0 1px #ffffff0d, 0 5px 14px #02061255;
+    transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+  }
+  .task-card-face::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    bottom: 10px;
+    left: -1px;
+    width: 2px;
+    border-radius: 1px 3px 2px 1px;
+    background: var(--task-accent);
+    opacity: .6;
+    pointer-events: none;
+  }
+  .task-card-shell:hover .task-card-face, .task-card-shell:focus-within .task-card-face {
+    border-color: color-mix(in srgb, var(--primary) 50%, var(--border));
+    box-shadow: inset 0 1px #ffffff12, 0 9px 19px #02061266;
+  }
+  .task-card-overlay .task-card-shell::before { transform: translate(2px, 3px) rotate(1deg); }
+  .task-card-ghost .task-card-shell::before { display: none; }
+
+  .priority-mark {
+    position: relative;
+    border-radius: 3px 5px 2px 4px;
+    padding: 2px 5px;
+    color: var(--priority-color);
+    background: linear-gradient(175deg, color-mix(in srgb, var(--priority-color) 17%, transparent), color-mix(in srgb, var(--priority-color) 7%, transparent));
+    box-shadow: inset 0 -1px color-mix(in srgb, var(--priority-color) 30%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-card-shell::before { transition: none; transform: none !important; }
+}

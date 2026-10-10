@@ -36,6 +36,22 @@ export function SketchCorner({ className, ...props }: SketchProps) {
   return <svg {...base} viewBox="0 0 36 36" className={cn('sketch size-8', className)} {...props}><path d="M6 29 5 7c9-1 17 0 25-1M10 25l-1-14 16-1" opacity=".7" /></svg>
 }
 
+export function SketchTape({ className, ...props }: SketchProps) {
+  return <svg {...base} viewBox="0 0 54 20" className={cn('sketch h-5 w-14', className)} {...props}><path d="M3 3 51 2l-2 15-46 1Z" fill="currentColor" stroke="none" opacity=".12" /><path d="m3 3 48-1-2 15-46 1ZM10 6l-2 9m8-9-2 8m8-8-2 8m8-8-2 8m8-8-2 8m8-8-2 8" opacity=".42" strokeWidth=".7" /></svg>
+}
+
+export function SketchStroke({ className, ...props }: SketchProps) {
+  return <svg {...base} preserveAspectRatio="none" viewBox="0 0 120 14" className={cn('sketch h-2 w-20', className)} {...props}><path d="M3 8c25-5 40 0 59-2 20-2 35-1 55-3M8 11c31-2 67 0 96-4" opacity=".72" strokeWidth="1.7" /></svg>
+}
+
+export function SketchHighlight({ className, ...props }: SketchProps) {
+  return <svg {...base} preserveAspectRatio="none" viewBox="0 0 120 20" className={cn('sketch h-5 w-24', className)} {...props}><path d="M4 7c31-3 69-3 111-4l-2 12c-44 2-78 1-108 2Z" fill="currentColor" stroke="none" opacity=".14" /><path d="M4 8c41-4 74-2 111-5M5 17c36-2 73 0 108-2" opacity=".4" strokeWidth="1" /></svg>
+}
+
+export function SketchNotch({ className, ...props }: SketchProps) {
+  return <svg {...base} viewBox="0 0 28 28" className={cn('sketch size-7', className)} {...props}><path d="M2 25c7-6 4-12 11-14 5-1 8-4 12-9M15 24l10-5M19 27l7-3" opacity=".7" /></svg>
+}
+
 // Compatibility names keep existing screens using the same centralized SVGs.
 export function HandDrawnArrow(props: SketchProps) { return <SketchArrow {...props} /> }
 export function DoodleCircle(props: SketchProps) { return <SketchCircle {...props} /> }
